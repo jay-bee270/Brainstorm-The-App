@@ -1,20 +1,41 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from "react";
+import { StatusBar } from "react-native";
+import { ThemeProvider } from './context/ThemeContext';
+// import { ToastProvider } from './utils/ToastProvider';
+import RouterPath from "./routing/RouterPath";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function App() {
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  // useEffect(() => {
+  //   const initializeApp = async () => {
+  //     // TEMPORARY: Clear storage for testing (remove this in production)
+  //     await AsyncStorage.clear();
+  //     console.log('🔄 Storage cleared for testing');
+      
+  //     setIsLoading(false);
+  //   };
+
+  //   initializeApp();
+  // }, []);
+
+  // if (isLoading) {
+  //   return null; // Or a minimal loading indicator
+  // }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <ThemeProvider>
+      {/* <ToastProvider> */}
+        <StatusBar 
+          barStyle="light-content" 
+          backgroundColor="#000000" 
+          translucent={true}
+        />
+        <RouterPath />
+      {/* </ToastProvider> */}
+    </ThemeProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;
