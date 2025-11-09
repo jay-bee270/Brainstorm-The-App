@@ -199,7 +199,7 @@ function Welcome() {
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Collaborating</Text>
+          <Text style={styles.statLabel}>Collaboration</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     color: '#9CA3AF',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
   statDivider: {

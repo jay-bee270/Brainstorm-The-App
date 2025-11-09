@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+"use client"
+
+import { useState } from "react"
 import {
   View,
   TextInput,
   TouchableOpacity,
   Text,
+  ScrollView,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -11,229 +14,207 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI } from '../../services/api';
+} from "react-native"
+import { authAPI, parseError, saveUserData } from "../../services/api"
 
 function Login({ navigation }) {
   const [form, setForm] = useState({
-    email: '',
-    password: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+    email: "",
+    password: "",
+  })
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleChange = (name, value) => {
-    setForm({ ...form, [name]: value });
+    setForm({ ...form, [name]: value })
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }))
     }
-  };
+  }
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword)
+  }
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors = {}
 
     if (!form.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Email is invalid"
     }
 
     if (!form.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required"
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async () => {
-    if (loading) return;
-    
+    if (loading) return
+
     if (!validateForm()) {
-      Alert.alert('Validation Error', 'Please check your email and password');
-      return;
+      Alert.alert("Validation Error", "Please fix the errors in the form")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
       const credentials = {
         email: form.email.trim().toLowerCase(),
         password: form.password,
-      };
+      }
 
-      console.log('Attempting login with:', { ...credentials, password: '***' });
-      
-      const response = await authAPI.login(credentials);
-      console.log('Login response:', response);
+      console.log("[Login] Attempting login with:", {
+        ...credentials,
+        password: "***",
+      })
+
+      const response = await authAPI.login(credentials)
 
       if (response.data) {
-        const { token, user } = response.data;
-        
-        await AsyncStorage.multiSet([
-          ['token', token],
-          ['userId', user._id],
-        ]);
+        await saveUserData(response.data)
 
-        console.log('User logged in successfully:', user.username);
-        
+        console.log("[Login] User logged in successfully:", response.data.username)
+
         Alert.alert(
-          'Welcome Back! 👋',
-          `Great to see you again, ${user.username || user.name}!`,
+          "Welcome Back!",
+          `Great to see you again, ${response.data.username}!`,
           [
-            { 
-              text: 'Continue', 
-              onPress: () => navigation.replace('Dashboard')
-            }
-          ],
-          { cancelable: false }
-        );
-        
-      } else {
-        throw new Error('No data received from server');
+            {
+              text: "Continue",
+              onPress: () => navigation.replace("Dashboard"),
+            },
+          ]
+        )
       }
-      
     } catch (error) {
-      console.error('Login error:', error);
-      
-      let errorMessage = 'Login failed. Please check your credentials and try again.';
-      
-      if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
-        errorMessage = 'Network error. Please check your internet connection.';
-      } else if (error.message.includes('401') || error.response?.data?.message?.includes('Invalid credentials')) {
-        errorMessage = 'Invalid email or password. Please try again.';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message.includes('404')) {
-        errorMessage = 'No account found with this email address.';
-      }
-      
-      Alert.alert('Login Failed', errorMessage);
+      console.error("[Login] Login error:", error)
+
+      const errorInfo = parseError(error)
+      const { title, message } = errorInfo
+
+      setErrors({ general: message })
+
+      Alert.alert(title, message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
-
-  const handleSignupRedirect = () => {
-    navigation.navigate('Signup');
-  };
-
-  const handleForgotPassword = () => {
-    Alert.alert(
-      'Forgot Password',
-      'Please contact support or try resetting your password through our website.',
-      [{ text: 'OK' }]
-    );
-  };
+  }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue collaborating</Text>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                placeholder="Enter your email"
-                placeholderTextColor="#6B7280"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={form.email}
-                onChangeText={(text) => handleChange('email', text)}
-                returnKeyType="next"
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.formContainer}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>Sign in to continue your creative journey</Text>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
-                placeholder="Enter your password"
-                placeholderTextColor="#6B7280"
-                secureTextEntry
-                autoCapitalize="none"
-                value={form.password}
-                onChangeText={(text) => handleChange('password', text)}
-                returnKeyType="go"
-                onSubmitEditing={handleSubmit}
-              />
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-            </View>
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="your@email.com"
+                  placeholderTextColor="#6B7280"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={form.email}
+                  onChangeText={(text) => handleChange("email", text)}
+                  editable={!loading}
+                />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              </View>
 
-            <TouchableOpacity 
-              style={styles.forgotPassword}
-              onPress={handleForgotPassword}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={[styles.passwordInput, errors.password && styles.inputError]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#6B7280"
+                    secureTextEntry={!showPassword}
+                    value={form.password}
+                    onChangeText={(text) => handleChange("password", text)}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={togglePasswordVisibility}
+                    disabled={loading}
+                  >
+                    <Text style={styles.eyeIconText}>
+                      {showPassword ? "👁️" : "👁️‍🗨️"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+              </View>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, (loading || !form.email || !form.password) && styles.loginButtonDisabled]} 
-              onPress={handleSubmit}
-              disabled={loading || !form.email || !form.password}
-            >
-              {loading ? (
-                <ActivityIndicator color="#000000" size="small" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={handleSignupRedirect}>
-                <Text style={styles.signupLink}>Sign up</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#000000" size="small" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+                )}
               </TouchableOpacity>
+
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Signup")} disabled={loading}>
+                  <Text style={[styles.signupLink, loading && styles.signupLinkDisabled]}>Sign up</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-     borderRadius: 24,
+    backgroundColor: "#000000",
   },
-  background: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
     padding: 24,
   },
+  formContainer: {
+    borderRadius: 24,
+    padding: 12,
+  },
   header: {
-    alignItems: 'center',
-    marginBottom: 48,
+    alignItems: "center",
+    marginBottom: 32,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 8,
+    fontSize: 30,
+    marginTop: 16,
+    fontWeight: "bold",
+    color: "#10B981",
+    textAlign: "center",
+    marginBottom: 16,
   },
   subtitle: {
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginBottom: 24,
     fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
   },
   form: {
     gap: 16,
@@ -242,66 +223,94 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#10B981',
+    color: "#10B981",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   input: {
-    backgroundColor: 'rgba(31, 41, 55, 0.8)',
-    color: '#FFFFFF',
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#4B5563',
+    borderColor: "#4B5563",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
   },
+  passwordInputContainer: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
+    flex: 1,
+    backgroundColor: "rgba(31, 41, 55, 0.8)",
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#4B5563",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    paddingRight: 50, // Space for the eye icon
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: 16,
+    padding: 4,
+  },
+  eyeIconText: {
+    fontSize: 18,
+    color: "#9CA3AF",
+  },
   inputError: {
-    borderColor: '#EF4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: "#EF4444",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
   },
   errorText: {
-    color: '#EF4444',
+    color: "#EF4444",
     fontSize: 12,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-  },
-  forgotPasswordText: {
-    color: '#10B981',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   loginButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: "#10B981",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loginButtonDisabled: {
-    backgroundColor: '#374151',
+    backgroundColor: "#374151",
+    shadowOpacity: 0,
   },
   loginButtonText: {
-    color: '#000000',
+    color: "#000000",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 24,
   },
   signupText: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
     fontSize: 14,
   },
   signupLink: {
-    color: '#10B981',
+    color: "#10B981",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
-});
+  signupLinkDisabled: {
+    opacity: 0.5,
+  },
+})
 
-export default Login;
+export default Login
