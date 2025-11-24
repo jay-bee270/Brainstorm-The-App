@@ -10,11 +10,13 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useTheme } from '../context/ThemeContext'; // Import useTheme
 import Welcome from "../components/dashboard/Welcome";
 import { postsAPI } from '../services/api';
 
 function Dashboard() {
   const navigation = useNavigation();
+  const { colors } = useTheme(); // Get theme colors
   const [featuredProjects, setFeaturedProjects] = useState({
     gaming: [],
     research: [],
@@ -134,18 +136,21 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10B981" />
-        <Text style={styles.loadingText}>Loading Dashboard...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.primary }]}>Loading Dashboard...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
+      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        <TouchableOpacity 
+          style={[styles.retryButton, { backgroundColor: colors.primary }]} 
+          onPress={fetchDashboardData}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -153,20 +158,32 @@ function Dashboard() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]} 
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.content}>
         <Welcome />
         
         {/* Featured Projects Grid */}
         <View style={styles.projectsGrid}>
           {Object.entries(featuredProjects).map(([category, projects]) => (
-            <View key={category} style={styles.categoryCard}>
+            <View 
+              key={category} 
+              style={[
+                styles.categoryCard, 
+                { 
+                  backgroundColor: colors.card, 
+                  borderColor: colors.border 
+                }
+              ]}
+            >
               <View style={styles.categoryHeader}>
-                <Text style={styles.categoryTitle}>
+                <Text style={[styles.categoryTitle, { color: colors.primary }]}>
                   {category.charAt(0).toUpperCase() + category.slice(1)} Projects
                 </Text>
                 <TouchableOpacity onPress={() => handleViewAll(category)}>
-                  <Text style={styles.viewAllText}>View All →</Text>
+                  <Text style={[styles.viewAllText, { color: colors.primary }]}>View All →</Text>
                 </TouchableOpacity>
               </View>
               
@@ -177,30 +194,53 @@ function Dashboard() {
                     return (
                       <TouchableOpacity
                         key={formattedProject._id || index}
-                        style={styles.projectCard}
+                        style={[
+                          styles.projectCard, 
+                          { 
+                            backgroundColor: colors.inputBackground,
+                            borderColor: colors.border
+                          }
+                        ]}
                         onPress={() => handleJoinProject(formattedProject)}
                       >
-                        <Text style={styles.projectTitle}>{formattedProject.title}</Text>
+                        <Text style={[styles.projectTitle, { color: colors.text }]}>
+                          {formattedProject.title}
+                        </Text>
                         <View style={styles.tagsContainer}>
                           {formattedProject.tags.map((tag, i) => (
-                            <View key={i} style={styles.tag}>
-                              <Text style={styles.tagText}>{tag}</Text>
+                            <View 
+                              key={i} 
+                              style={[
+                                styles.tag, 
+                                { 
+                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                  borderColor: 'rgba(16, 185, 129, 0.2)'
+                                }
+                              ]}
+                            >
+                              <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
                             </View>
                           ))}
                         </View>
-                        <View style={styles.projectFooter}>
-                          <Text style={styles.contactText}>
-                            Via: <Text style={styles.contactMethod}>{formattedProject.contactMethod}</Text>
+                        <View style={[styles.projectFooter, { borderTopColor: colors.border }]}>
+                          <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+                            Via: <Text style={[styles.contactMethod, { color: colors.primary }]}>
+                              {formattedProject.contactMethod}
+                            </Text>
                           </Text>
-                          <Text style={styles.joinText}>Join →</Text>
+                          <Text style={[styles.joinText, { color: colors.primary }]}>Join →</Text>
                         </View>
                       </TouchableOpacity>
                     );
                   })
                 ) : (
                   <View style={styles.noProjectsContainer}>
-                    <Text style={styles.noProjectsText}>No projects available</Text>
-                    <Text style={styles.noProjectsSubtext}>Check back later for new {category} projects</Text>
+                    <Text style={[styles.noProjectsText, { color: colors.textSecondary }]}>
+                      No projects available
+                    </Text>
+                    <Text style={[styles.noProjectsSubtext, { color: colors.textSecondary }]}>
+                      Check back later for new {category} projects
+                    </Text>
                   </View>
                 )}
               </View>
@@ -210,27 +250,59 @@ function Dashboard() {
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.activeProjects}</Text>
-            <Text style={styles.statLabel}>Active Projects</Text>
+          <View 
+            style={[
+              styles.statCard, 
+              { 
+                backgroundColor: colors.card, 
+                borderColor: colors.border 
+              }
+            ]}
+          >
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.activeProjects}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Active Projects</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.collaborators}</Text>
-            <Text style={styles.statLabel}>Collaborators</Text>
+          <View 
+            style={[
+              styles.statCard, 
+              { 
+                backgroundColor: colors.card, 
+                borderColor: colors.border 
+              }
+            ]}
+          >
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.collaborators}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Collaborators</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.completedProjects}</Text>
-            <Text style={styles.statLabel}>Completed Projects</Text>
+          <View 
+            style={[
+              styles.statCard, 
+              { 
+                backgroundColor: colors.card, 
+                borderColor: colors.border 
+              }
+            ]}
+          >
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.completedProjects}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completed Projects</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{stats.newToday}</Text>
-            <Text style={styles.statLabel}>New Today</Text>
+          <View 
+            style={[
+              styles.statCard, 
+              { 
+                backgroundColor: colors.card, 
+                borderColor: colors.border 
+              }
+            ]}
+          >
+            <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.newToday}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>New Today</Text>
           </View>
         </View>
 
         {/* Pull to refresh indicator */}
         <TouchableOpacity style={styles.refreshButton} onPress={fetchDashboardData}>
-          <Text style={styles.refreshText}>↻ Refresh Dashboard</Text>
+          <Text style={[styles.refreshText, { color: colors.primary }]}>↻ Refresh Dashboard</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -240,7 +312,6 @@ function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   content: {
     padding: 16,
@@ -249,10 +320,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
   loadingText: {
-    color: '#10B981',
     marginTop: 12,
     fontSize: 16,
   },
@@ -260,23 +329,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
     padding: 20,
   },
   errorText: {
-    color: '#EF4444',
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#10B981',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '600',
   },
   projectsGrid: {
@@ -284,11 +350,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   categoryCard: {
-    backgroundColor: 'rgba(31, 41, 55, 0.5)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#374151',
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -299,11 +363,9 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#10B981',
     textTransform: 'capitalize',
   },
   viewAllText: {
-    color: '#10B981',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -311,14 +373,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   projectCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
   projectTitle: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 8,
@@ -330,15 +389,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
   },
   tagText: {
-    color: '#10B981',
     fontSize: 12,
   },
   projectFooter: {
@@ -347,18 +403,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#374151',
   },
   contactText: {
-    color: '#9CA3AF',
     fontSize: 12,
   },
   contactMethod: {
-    color: '#10B981',
     textTransform: 'capitalize',
   },
   joinText: {
-    color: '#10B981',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -367,12 +419,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   noProjectsText: {
-    color: '#9CA3AF',
     fontSize: 14,
     marginBottom: 4,
   },
   noProjectsSubtext: {
-    color: '#6B7280',
     fontSize: 12,
   },
   statsGrid: {
@@ -385,20 +435,16 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: 'rgba(31, 41, 55, 0.5)',
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#374151',
     alignItems: 'center',
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#10B981',
   },
   statLabel: {
-    color: '#9CA3AF',
     fontSize: 14,
     marginTop: 4,
     textAlign: 'center',
@@ -408,7 +454,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   refreshText: {
-    color: '#10B981',
     fontSize: 14,
   },
 });

@@ -2,19 +2,19 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Navbar from './Navbar';
 import BottomBar from "./Bottombar";
+import { useTheme } from '../../context/ThemeContext';
 
 const Layout = ({ children }) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
-      {/* Top Navbar */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Navbar />
-      
-      {/* Main Content Area */}
-      <View style={styles.content}>
+
+      <View style={[styles.content, { backgroundColor: colors.background }]}>
         {children}
       </View>
-      
-      {/* Bottom Navigation Bar */}
+
       <BottomBar />
     </View>
   );
@@ -23,11 +23,9 @@ const Layout = ({ children }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   content: {
     flex: 1,
-    backgroundColor: '#000000',
   },
 });
 

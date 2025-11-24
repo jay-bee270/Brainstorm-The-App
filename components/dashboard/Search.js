@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { postsAPI } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext'; // Adjust import path as needed
 
 function Search() {
+  const { colors } = useTheme(); // Get theme colors
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -74,14 +76,12 @@ function Search() {
   };
 
   const handleResultPress = (item) => {
-    // You can navigate to project details or handle join action
     Alert.alert(
       item.title,
       `Category: ${item.category}\n\n${item.description}`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'View Details', onPress: () => {
-          // Navigate to project details screen
           console.log('Navigate to project:', item._id);
         }},
       ]
@@ -93,37 +93,46 @@ function Search() {
     
     return (
       <TouchableOpacity 
-        style={styles.resultItem}
+        style={[styles.resultItem, { 
+          backgroundColor: colors.card,
+          borderColor: colors.border 
+        }]}
         onPress={() => handleResultPress(formattedItem)}
       >
         <View style={styles.resultHeader}>
-          <Text style={styles.resultTitle} numberOfLines={2}>
+          <Text style={[styles.resultTitle, { color: colors.text }]} numberOfLines={2}>
             {formattedItem.title}
           </Text>
           <View style={[
             styles.categoryBadge,
-            { backgroundColor: getCategoryColor(formattedItem.category) }
+            { backgroundColor: getCategoryColor(formattedItem.category, colors) }
           ]}>
-            <Text style={styles.categoryText}>
+            <Text style={[styles.categoryText, { color: colors.primary }]}>
               {formattedItem.category}
             </Text>
           </View>
         </View>
         
-        <Text style={styles.resultDescription} numberOfLines={3}>
+        <Text style={[styles.resultDescription, { color: colors.textSecondary }]} numberOfLines={3}>
           {formattedItem.description}
         </Text>
         
         {formattedItem.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {formattedItem.tags.slice(0, 4).map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
+              <View key={index} style={[styles.tag, { 
+                backgroundColor: `${colors.primary}15`,
+                borderColor: `${colors.primary}30`
+              }]}>
+                <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
               </View>
             ))}
             {formattedItem.tags.length > 4 && (
-              <View style={styles.moreTag}>
-                <Text style={styles.moreTagText}>
+              <View style={[styles.moreTag, { 
+                backgroundColor: `${colors.textSecondary}15`,
+                borderColor: `${colors.textSecondary}30`
+              }]}>
+                <Text style={[styles.moreTagText, { color: colors.textSecondary }]}>
                   +{formattedItem.tags.length - 4}
                 </Text>
               </View>
@@ -132,9 +141,11 @@ function Search() {
         )}
         
         {formattedItem.contactMethod && (
-          <View style={styles.contactInfo}>
-            <Text style={styles.contactText}>
-              Contact via <Text style={styles.contactMethod}>{formattedItem.contactMethod}</Text>
+          <View style={[styles.contactInfo, { borderTopColor: colors.border }]}>
+            <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+              Contact via <Text style={[styles.contactMethod, { color: colors.primary }]}>
+                {formattedItem.contactMethod}
+              </Text>
             </Text>
           </View>
         )}
@@ -142,22 +153,24 @@ function Search() {
     );
   };
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = (category, themeColors) => {
     const colors = {
-      gaming: 'rgba(147, 51, 234, 0.1)',
-      research: 'rgba(59, 130, 246, 0.1)',
-      development: 'rgba(16, 185, 129, 0.1)',
-      design: 'rgba(245, 158, 11, 0.1)',
+      gaming: `${themeColors.primary}15`,
+      research: `${themeColors.primary}15`,
+      development: `${themeColors.primary}15`,
+      design: `${themeColors.primary}15`,
     };
-    return colors[category] || 'rgba(107, 114, 128, 0.1)';
+    return colors[category] || `${themeColors.textSecondary}15`;
   };
 
   const renderEmptyState = () => {
     if (loading) {
       return (
         <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.emptyStateText}>Searching projects...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+            Searching projects...
+          </Text>
         </View>
       );
     }
@@ -165,13 +178,20 @@ function Search() {
     if (hasSearched && searchTerm && results.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <FontAwesome5 name="search" size={48} color="#4B5563" />
-          <Text style={styles.emptyStateTitle}>No results found</Text>
-          <Text style={styles.emptyStateText}>
+          <FontAwesome5 name="search" size={48} color={colors.textSecondary} />
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+            No results found
+          </Text>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
             No projects found for "{searchTerm}". Try different keywords or check your spelling.
           </Text>
-          <TouchableOpacity style={styles.clearButton} onPress={clearSearch}>
-            <Text style={styles.clearButtonText}>Clear Search</Text>
+          <TouchableOpacity 
+            style={[styles.clearButton, { backgroundColor: colors.surface }]} 
+            onPress={clearSearch}
+          >
+            <Text style={[styles.clearButtonText, { color: colors.text }]}>
+              Clear Search
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -180,17 +200,24 @@ function Search() {
     if (!hasSearched) {
       return (
         <View style={styles.emptyState}>
-          <FontAwesome5 name="search" size={48} color="#4B5563" />
-          <Text style={styles.emptyStateTitle}>Search Projects</Text>
-          <Text style={styles.emptyStateText}>
+          <FontAwesome5 name="search" size={48} color={colors.textSecondary} />
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+            Search Projects
+          </Text>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
             Find projects by title, description, tags, or skills
           </Text>
-          <View style={styles.searchTips}>
-            <Text style={styles.tipsTitle}>Try searching for:</Text>
-            <Text style={styles.tip}>• "React Native"</Text>
-            <Text style={styles.tip}>• "AI research"</Text>
-            <Text style={styles.tip}>• "Game development"</Text>
-            <Text style={styles.tip}>• "Web design"</Text>
+          <View style={[styles.searchTips, { 
+            backgroundColor: colors.card,
+            borderColor: colors.border 
+          }]}>
+            <Text style={[styles.tipsTitle, { color: colors.primary }]}>
+              Try searching for:
+            </Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "React Native"</Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "AI research"</Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "Game development"</Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "Web design"</Text>
           </View>
         </View>
       );
@@ -201,42 +228,50 @@ function Search() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Search Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Search</Text>
-          <Text style={styles.headerSubtitle}>Find collaboration opportunities</Text>
+          <Text style={[styles.headerTitle, { color: colors.primary }]}>
+            Search
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            Find collaboration opportunities
+          </Text>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
+          <View style={[styles.searchInputContainer, { 
+            backgroundColor: colors.surface,
+            borderColor: colors.border 
+          }]}>
             <FontAwesome5 
               name="search" 
               size={16} 
-              color="#6B7280" 
+              color={colors.textSecondary} 
               style={styles.searchIcon}
             />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               value={searchTerm}
               onChangeText={setSearchTerm}
               placeholder="Search projects, skills, tags..."
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={colors.textSecondary}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               clearButtonMode="while-editing"
             />
             {searchTerm.length > 0 && (
               <TouchableOpacity onPress={clearSearch} style={styles.clearIcon}>
-                <FontAwesome5 name="times" size={16} color="#6B7280" />
+                <FontAwesome5 name="times" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
           <TouchableOpacity 
             style={[
               styles.searchButton,
-              !searchTerm.trim() && styles.searchButtonDisabled
+              { backgroundColor: colors.primary },
+              !searchTerm.trim() && [styles.searchButtonDisabled, { backgroundColor: colors.surface }]
             ]} 
             onPress={handleSearch}
             disabled={!searchTerm.trim()}
@@ -249,11 +284,13 @@ function Search() {
         {results.length > 0 ? (
           <View style={styles.resultsContainer}>
             <View style={styles.resultsHeader}>
-              <Text style={styles.resultsCount}>
+              <Text style={[styles.resultsCount, { color: colors.primary }]}>
                 {results.length} project{results.length !== 1 ? 's' : ''} found
               </Text>
               <TouchableOpacity onPress={clearSearch}>
-                <Text style={styles.clearResultsText}>Clear</Text>
+                <Text style={[styles.clearResultsText, { color: colors.textSecondary }]}>
+                  Clear
+                </Text>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -275,7 +312,6 @@ function Search() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
     padding: 16,
   },
   header: {
@@ -284,12 +320,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#10B981',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -300,9 +334,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
     borderWidth: 1,
-    borderColor: '#4B5563',
     borderRadius: 12,
     paddingHorizontal: 16,
   },
@@ -312,7 +344,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: 14,
-    color: '#FFFFFF',
     fontSize: 16,
   },
   clearIcon: {
@@ -320,7 +351,6 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     marginLeft: 12,
-    backgroundColor: '#10B981',
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 12,
@@ -328,7 +358,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchButtonDisabled: {
-    backgroundColor: '#374151',
+    opacity: 0.6,
   },
   searchButtonText: {
     color: '#FFFFFF',
@@ -345,24 +375,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   resultsCount: {
-    color: '#10B981',
     fontSize: 16,
     fontWeight: '600',
   },
   clearResultsText: {
-    color: '#6B7280',
     fontSize: 14,
   },
   resultsList: {
     paddingBottom: 16,
   },
   resultItem: {
-    backgroundColor: 'rgba(31, 41, 55, 0.5)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#374151',
   },
   resultHeader: {
     flexDirection: 'row',
@@ -373,7 +399,6 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     flex: 1,
     marginRight: 12,
   },
@@ -382,16 +407,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   categoryText: {
-    color: '#10B981',
     fontSize: 12,
     fontWeight: '500',
     textTransform: 'capitalize',
   },
   resultDescription: {
-    color: '#9CA3AF',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
@@ -403,40 +425,31 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tag: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   tagText: {
-    color: '#10B981',
     fontSize: 12,
   },
   moreTag: {
-    backgroundColor: 'rgba(107, 114, 128, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(107, 114, 128, 0.3)',
   },
   moreTagText: {
-    color: '#6B7280',
     fontSize: 12,
   },
   contactInfo: {
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#374151',
   },
   contactText: {
-    color: '#6B7280',
     fontSize: 12,
   },
   contactMethod: {
-    color: '#10B981',
     textTransform: 'capitalize',
   },
   emptyState: {
@@ -448,45 +461,37 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
     paddingHorizontal: 20,
   },
   searchTips: {
-    backgroundColor: 'rgba(31, 41, 55, 0.5)',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#374151',
     marginTop: 16,
   },
   tipsTitle: {
-    color: '#10B981',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   tip: {
-    color: '#9CA3AF',
     fontSize: 14,
     marginBottom: 4,
   },
   clearButton: {
-    backgroundColor: '#374151',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   clearButtonText: {
-    color: '#FFFFFF',
     fontWeight: '600',
   },
 });

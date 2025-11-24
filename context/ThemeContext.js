@@ -6,7 +6,7 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
-  const [darkMode, setDarkMode] = useState(null);
+  const [themeMode, setThemeMode] = useState('system'); // 'light', 'dark', 'system'
 
   useEffect(() => {
     loadThemePreference();
@@ -14,63 +14,71 @@ export function ThemeProvider({ children }) {
 
   const loadThemePreference = async () => {
     try {
-      const saved = await AsyncStorage.getItem('darkMode');
+      const saved = await AsyncStorage.getItem('themeMode');
       if (saved !== null) {
-        setDarkMode(JSON.parse(saved));
-      } else {
-        setDarkMode(systemColorScheme === 'dark');
+        setThemeMode(saved);
       }
     } catch (error) {
       console.error('Error loading theme preference:', error);
-      setDarkMode(systemColorScheme === 'dark');
     }
   };
 
   useEffect(() => {
-    if (darkMode !== null) {
+    if (themeMode !== null) {
       saveThemePreference();
     }
-  }, [darkMode]);
+  }, [themeMode]);
 
   const saveThemePreference = async () => {
     try {
-      await AsyncStorage.setItem('darkMode', JSON.stringify(darkMode));
+      await AsyncStorage.setItem('themeMode', themeMode);
     } catch (error) {
       console.error('Error saving theme preference:', error);
     }
   };
 
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
+  // Determine the actual theme to use based on mode and system preference
+  const getActualTheme = () => {
+    if (themeMode === 'system') {
+      return systemColorScheme === 'dark' ? 'dark' : 'light';
+    }
+    return themeMode;
+  };
+
+  const isDarkMode = getActualTheme() === 'dark';
+
+  const toggleTheme = (mode) => {
+    setThemeMode(mode);
   };
 
   const theme = {
-    darkMode,
-    toggleTheme,
-    colors: darkMode 
-      ? {
-          background: '#111827',
-          surface: '#1F2937',
-          text: '#FFFFFF',
-          textSecondary: '#9CA3AF',
-          primary: '#10B981',
-          border: '#374151',
-          error: '#EF4444',
-        }
-      : {
-          background: '#FFFFFF',
-          surface: '#F3F4F6',
-          text: '#111827',
-          textSecondary: '#6B7280',
-          primary: '#10B981',
-          border: '#D1D5DB',
-          error: '#DC2626',
-        }
-  };
-
-  if (darkMode === null) {
-    return null; // or a loading spinner
-  }
+  themeMode,
+  isDarkMode,
+  toggleTheme,
+  colors: isDarkMode 
+    ? {
+        background: '#000',
+        surface: '#1F2937',
+        text: '#FFFFFF',
+        textSecondary: '#9CA3AF',
+        primary: '#10B981',
+        border: '#374151',
+        error: '#EF4444',
+        card: 'rgba(31, 41, 55, 0.8)',
+        buttonText: '#FFFFFF',   // ✅ Added
+      }
+    : {
+        background: '#FFFFFF',
+        surface: '#F3F4F6',
+        text: '#111827',
+        textSecondary: '#6B7280',
+        primary: '#10B981',
+        border: '#D1D5DB',
+        error: '#DC2626',
+        card: 'rgba(243, 244, 246, 0.8)',
+        buttonText: '#FFFFFF',   // ✅ Added 
+      }
+};
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -86,3 +94,4 @@ export const useTheme = () => {
   }
   return context;
 };
+

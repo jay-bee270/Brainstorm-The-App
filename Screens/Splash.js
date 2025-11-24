@@ -8,8 +8,20 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
+
+// Gradient colors that work in both light and dark mode
+const GRADIENT_COLORS = {
+  start: '#10B981',    // Emerald
+  end: '#059669',      // Darker emerald
+};
+
+const SPLASH_COLORS = {
+  textPrimary: '#FFFFFF',
+  textSecondary: '#F0FDF4',
+};
 
 const SplashScreen = () => {
   const navigation = useNavigation();
@@ -17,7 +29,6 @@ const SplashScreen = () => {
   const scaleAnim = new Animated.Value(0.8);
 
   useEffect(() => {
-    // Simple fade in animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -31,7 +42,6 @@ const SplashScreen = () => {
       }),
     ]).start();
 
-    // Check where to navigate
     const checkNavigation = async () => {
       try {
         const [token, hasSeenOnboarding] = await Promise.all([
@@ -41,20 +51,16 @@ const SplashScreen = () => {
 
         setTimeout(() => {
           if (token) {
-            // User is logged in, go to Dashboard
             navigation.replace('Dashboard');
           } else if (hasSeenOnboarding) {
-            // User has seen onboarding but not logged in, go to Login
             navigation.replace('Login');
           } else {
-            // New user, show onboarding
             navigation.replace('Onboarding');
           }
         }, 2000);
         
       } catch (error) {
         console.error('Error checking navigation:', error);
-        // Default to onboarding on error
         setTimeout(() => {
           navigation.replace('Onboarding');
         }, 2000);
@@ -65,7 +71,10 @@ const SplashScreen = () => {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[GRADIENT_COLORS.start, GRADIENT_COLORS.end]}
+      style={styles.container}
+    >
       <Animated.View
         style={[
           styles.content,
@@ -75,22 +84,28 @@ const SplashScreen = () => {
           }
         ]}
       >
-        <View style={styles.logo}>
+        <View style={[styles.logo, { 
+          backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+          borderColor: 'rgba(255, 255, 255, 0.3)',
+        }]}>
           <Text style={styles.logoIcon}>🧠</Text>
         </View>
-        <Text style={styles.appName}>BrainStorm</Text>
-        <Text style={styles.tagline}>Where Innovation Meets Collaboration</Text>
+        <Text style={[styles.appName, { color: SPLASH_COLORS.textPrimary }]}>BrainStorm</Text>
+        <Text style={[styles.tagline, { color: SPLASH_COLORS.textSecondary }]}>
+          Where Innovation Meets Collaboration
+        </Text>
       </Animated.View>
       
-      <Text style={styles.poweredBy}>Powered by MikeBytes Technologies</Text>
-    </View>
+      <Text style={[styles.poweredBy, { color: SPLASH_COLORS.textSecondary }]}>
+        Powered by BRAINS Technologies
+      </Text>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -102,13 +117,12 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#10B981',
+    backdropFilter: 'blur(10px)', // For web if needed
   },
   logoIcon: {
     fontSize: 40,
@@ -116,20 +130,22 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#10B981',
     marginBottom: 10,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   tagline: {
     fontSize: 14,
-    color: '#9CA3AF',
     textAlign: 'center',
+    fontWeight: '500',
   },
   poweredBy: {
     position: 'absolute',
     bottom: 40,
-    color: '#6B7280',
     fontSize: 12,
+    fontWeight: '500',
   },
 });
 

@@ -8,6 +8,7 @@ import {
   Alert 
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../services/api';
 
@@ -16,6 +17,7 @@ function Welcome() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
+  const { colors } = useTheme();
 
   const fetchUserData = async (showLoader = false) => {
     try {
@@ -36,7 +38,6 @@ function Welcome() {
       
       if (response.data) {
         setUser(response.data);
-        // Store user ID for future use
         if (response.data._id) {
           await AsyncStorage.setItem('userId', response.data._id);
         }
@@ -47,7 +48,6 @@ function Welcome() {
     } catch (error) {
       console.error('Error fetching user:', error);
       
-      // Handle specific error cases
       if (error.message.includes('401') || error.message.includes('token')) {
         Alert.alert(
           'Session Expired',
@@ -82,7 +82,6 @@ function Welcome() {
     try {
       await authAPI.logout();
       setUser(null);
-      // Clear all stored data
       await AsyncStorage.multiRemove(['token', 'userId', 'userData']);
     } catch (error) {
       console.error('Logout error:', error);
@@ -99,12 +98,48 @@ function Welcome() {
     fetchUserData(true);
   };
 
-  // Fetch user data when component mounts
+  // NEW: Handle new project creation
+  const handleNewProject = () => {
+    if (!user) {
+      Alert.alert(
+        'Authentication Required',
+        'Please sign in to create a new project.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => navigation.navigate('Login') }
+        ]
+      );
+      return;
+    }
+
+    // Navigate to MyPosts with form opened
+    navigation.navigate('MyPosts', { 
+      showForm: true,
+      category: 'development' // Default category
+    });
+  };
+
+  // NEW: Navigate to view existing posts
+  const handleViewMyPosts = () => {
+    if (!user) {
+      Alert.alert(
+        'Authentication Required',
+        'Please sign in to view your projects.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => navigation.navigate('Login') }
+        ]
+      );
+      return;
+    }
+
+    navigation.navigate('MyPosts');
+  };
+
   useEffect(() => {
     fetchUserData();
   }, []);
 
-  // Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       const checkAuth = async () => {
@@ -120,10 +155,10 @@ function Welcome() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.loadingContent}>
-          <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.loadingText}>Loading your profile...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.primary }]}>Loading your profile...</Text>
         </View>
       </View>
     );
@@ -131,24 +166,24 @@ function Welcome() {
 
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.welcomeContent}>
-          <Text style={styles.title}>Welcome to Brainstorm! 🚀</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.primary }]}>Welcome to Brainstorm! 🚀</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Join our community of creators and collaborators
           </Text>
           <View style={styles.authButtons}>
             <TouchableOpacity 
-              style={styles.primaryButton}
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.primaryButtonText}>Sign In</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={() => navigation.navigate('Register')}
+              style={[styles.secondaryButton, { borderColor: colors.primary }]}
+              onPress={() => navigation.navigate('Signup')}
             >
-              <Text style={styles.secondaryButtonText}>Create Account</Text>
+              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Create Account</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -158,69 +193,69 @@ function Welcome() {
 
   return (
     <TouchableOpacity 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={handleProfilePress}
       activeOpacity={0.9}
     >
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: colors.primary }]}>
             Welcome back, {user.username || user.name || 'Collaborator'}! 👋
           </Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {getWelcomeMessage()}
           </Text>
           {user.email && (
-            <Text style={styles.userEmail}>{user.email}</Text>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user.email}</Text>
           )}
         </View>
         
         <View style={styles.actions}>
           <TouchableOpacity 
-            style={styles.refreshButton}
+            style={[styles.refreshButton, { backgroundColor: `${colors.primary}20` }]}
             onPress={handleRefresh}
             disabled={refreshing}
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color="#10B981" />
+              <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Text style={styles.refreshText}>↻</Text>
+              <Text style={[styles.refreshText, { color: colors.primary }]}>↻</Text>
             )}
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Quick Stats */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: colors.inputBackground }]}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Projects</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>0</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Projects</Text>
         </View>
-        <View style={styles.statDivider} />
+        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Collaboration</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>0</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Collaboration</Text>
         </View>
-        <View style={styles.statDivider} />
+        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>Completed</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>0</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completed</Text>
         </View>
       </View>
 
-      {/* Quick Actions */}
+      {/* Updated Quick Actions */}
       <View style={styles.quickActions}>
         <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('CreatePost')}
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={handleNewProject}
         >
           <Text style={styles.actionButtonText}>+ New Project</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.actionButtonOutline}
-          onPress={() => navigation.navigate('Profile')}
+          style={[styles.actionButtonOutline, { borderColor: colors.primary }]}
+          onPress={handleViewMyPosts}
         >
-          <Text style={styles.actionButtonOutlineText}>View Profile</Text>
+          <Text style={[styles.actionButtonOutlineText, { color: colors.primary }]}>My Profile</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -242,11 +277,9 @@ const getWelcomeMessage = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(31, 41, 55, 0.5)',
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#374151',
     margin: 16,
     marginBottom: 8,
   },
@@ -255,7 +288,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   loadingText: {
-    color: '#10B981',
     marginTop: 12,
     fontSize: 16,
   },
@@ -274,16 +306,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#10B981',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#9CA3AF',
     fontSize: 16,
     lineHeight: 22,
   },
   userEmail: {
-    color: '#6B7280',
     fontSize: 14,
     marginTop: 4,
   },
@@ -293,10 +322,8 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   refreshText: {
-    color: '#10B981',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -306,14 +333,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryButton: {
-    backgroundColor: '#10B981',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     flex: 1,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -323,17 +349,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#10B981',
     flex: 1,
   },
   secondaryButtonText: {
-    color: '#10B981',
     fontWeight: '600',
     textAlign: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -345,17 +368,14 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#10B981',
     marginBottom: 4,
   },
   statLabel: {
-    color: '#9CA3AF',
     fontSize: 11,
     textAlign: 'center',
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#374151',
     marginHorizontal: 8,
   },
   quickActions: {
@@ -363,14 +383,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionButton: {
-    backgroundColor: '#10B981',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
     flex: 1,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -380,11 +399,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#10B981',
     flex: 1,
   },
   actionButtonOutlineText: {
-    color: '#10B981',
     fontWeight: '600',
     textAlign: 'center',
   },

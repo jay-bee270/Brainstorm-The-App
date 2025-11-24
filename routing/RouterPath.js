@@ -1,6 +1,7 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useTheme } from '../context/ThemeContext';
 import SplashScreen from "../Screens/Splash";
 import OnboardingScreen from "../Screens/Onboarding";
 import SignupPage from "../Screens/Signup";
@@ -67,13 +68,40 @@ const SearchWithLayout = (props) => (
 );
 
 function RouterPath() {
+  const { colors, isDarkMode } = useTheme();
+
+  // Use React Navigation's built-in themes as base and override colors
+  const navigationTheme = isDarkMode 
+    ? {
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          primary: colors.primary,
+          background: colors.background,
+          card: colors.surface,
+          text: colors.text,
+          border: colors.border,
+        }
+      }
+    : {
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          primary: colors.primary,
+          background: colors.background,
+          card: colors.surface,
+          text: colors.text,
+          border: colors.border,
+        }
+      };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#000000' }
+          contentStyle: { backgroundColor: colors.background }
         }}
       >
         {/* Auth & Onboarding Routes (No Layout) */}

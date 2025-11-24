@@ -7,10 +7,12 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 
 const BottomBar = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { colors } = useTheme();
 
   const navItems = [
     { 
@@ -50,7 +52,7 @@ const BottomBar = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ThemedContainer>
       {navItems.map((item, index) => (
         <BottomBarItem
           key={index}
@@ -59,25 +61,50 @@ const BottomBar = () => {
           label={item.label}
           isActive={item.active}
           onPress={handlePress}
+          colors={colors}
         />
       ))}
+    </ThemedContainer>
+  );
+};
+
+const ThemedContainer = ({ children }) => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.container, { 
+      backgroundColor: colors.surface, 
+      borderTopColor: colors.border 
+    }]}>
+      {children}
     </View>
   );
 };
 
-const BottomBarItem = ({ to, icon, label, isActive, onPress }) => {
+const BottomBarItem = ({ to, icon, label, isActive, onPress, colors }) => {
+  const iconColor = isActive ? colors.primary : colors.textSecondary;
+  const labelColor = isActive ? colors.primary : colors.textSecondary;
+  const backgroundColor = isActive ? `${colors.primary}20` : 'transparent';
+
   return (
     <TouchableOpacity 
-      style={[styles.item, isActive && styles.itemActive]} 
+      style={[
+        styles.item, 
+        { backgroundColor }
+      ]} 
       onPress={() => onPress(to)}
     >
       <FontAwesome5 
         name={icon} 
         size={20} 
-        color={isActive ? '#10B981' : '#9CA3AF'} 
+        color={iconColor} 
         style={styles.icon} 
       />
-      <Text style={[styles.label, isActive && styles.labelActive]}>
+      <Text style={[
+        styles.label, 
+        { color: labelColor },
+        isActive && styles.labelActive
+      ]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -87,9 +114,7 @@ const BottomBarItem = ({ to, icon, label, isActive, onPress }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#1F2937',
     borderTopWidth: 1,
-    borderTopColor: '#374151',
     paddingHorizontal: 8,
     paddingVertical: 8,
     height: 70,
@@ -102,20 +127,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 2,
   },
-  itemActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-  },
   icon: {
     marginBottom: 4,
   },
   label: {
-    color: '#9CA3AF',
     fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
   },
   labelActive: {
-    color: '#10B981',
     fontWeight: '600',
   },
 });

@@ -1,6 +1,4 @@
-"use client"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   View,
   TextInput,
@@ -15,7 +13,25 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from "react-native"
-import { authAPI, parseError, saveUserData, ERROR_CODES } from "../../services/api"
+import { useTheme } from '../../context/ThemeContext'; // Import useTheme
+import { authAPI, saveUserData } from "../../services/api"
+
+const ERROR_MESSAGES = {
+  EMAIL_ALREADY_EXISTS: "This email is already registered. Please use a different email or log in.",
+  EMAIL_IN_USE: "This email is already in use. Please try another email address.",
+  USERNAME_ALREADY_EXISTS: "This username is already taken. Please choose a different username.",
+  USERNAME_IN_USE: "Someone already has this username. Try another.",
+  ACCOUNT_EXISTS: "An account with these credentials already exists. Please log in.",
+  PASSWORDS_NOT_MATCHING: "Passwords do not match. Please ensure both password fields are identical.",
+  PASSWORD_TOO_WEAK: "Password must be at least 6 characters.",
+  INVALID_EMAIL: "Please enter a valid email address (example: user@example.com).",
+  USERNAME_TOO_SHORT: "Username must be at least 3 characters long.",
+  USERNAME_INVALID_FORMAT: "Username can only contain letters, numbers, and underscores.",
+  NETWORK_ERROR: "Unable to connect to the server. Please check your internet connection.",
+  TIMEOUT_ERROR: "The request took too long. Please try again.",
+  SERVER_ERROR: "An error occurred on the server. Please try again later.",
+  UNKNOWN_ERROR: "An unexpected error occurred. Please try again.",
+}
 
 const VALIDATION_RULES = {
   username: {
@@ -63,6 +79,7 @@ const VALIDATION_RULES = {
 }
 
 function Signup({ navigation }) {
+  const { colors } = useTheme(); // Get theme colors
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -78,8 +95,216 @@ function Signup({ navigation }) {
   const [generalError, setGeneralError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [touchedFields, setTouchedFields] = useState({})
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Helper function to apply errors to specific fields
+  const applyErrorToField = (field, errorMsg, fieldErrors) => {
+    const errorLower = String(errorMsg).toLowerCase()
+
+    if (field === "email" || field === "email_address" || field.includes("email")) {
+      if (
+        errorLower.includes("already") ||
+        errorLower.includes("in use") ||
+        errorLower.includes("exists") ||
+        errorLower.includes("registered") ||
+        errorLower.includes("taken")
+      ) {
+        fieldErrors.email = ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
+      } else if (errorLower.includes("valid") || errorLower.includes("invalid")) {
+        fieldErrors.email = ERROR_MESSAGES.INVALID_EMAIL
+      } else {
+        fieldErrors.email = errorMsg
+      }
+    } else if (field === "username" || field === "user_name" || field.includes("username")) {
+      if (
+        errorLower.includes("already") ||
+        errorLower.includes("taken") ||
+        errorLower.includes("in use") ||
+        errorLower.includes("exists")
+      ) {
+        fieldErrors.username = ERROR_MESSAGES.USERNAME_ALREADY_EXISTS
+      } else if (errorLower.includes("at least 3") || errorLower.includes("3 characters")) {
+        fieldErrors.username = ERROR_MESSAGES.USERNAME_TOO_SHORT
+      } else if (errorLower.includes("format") || errorLower.includes("invalid")) {
+        fieldErrors.username = ERROR_MESSAGES.USERNAME_INVALID_FORMAT
+      } else {
+        fieldErrors.username = errorMsg
+      }
+    } else if (field === "password") {
+      if (errorLower.includes("at least") || errorLower.includes("weak") || errorLower.includes("short")) {
+        fieldErrors.password = ERROR_MESSAGES.PASSWORD_TOO_WEAK
+      } else if (errorLower.includes("match")) {
+        fieldErrors.confirmPassword = ERROR_MESSAGES.PASSWORDS_NOT_MATCHING
+      } else {
+        fieldErrors.password = errorMsg
+      }
+    } else if (field === "confirm_password" || field === "confirmPassword" || field === "password_confirmation" || field.includes("confirm")) {
+      if (errorLower.includes("match")) {
+        fieldErrors.confirmPassword = ERROR_MESSAGES.PASSWORDS_NOT_MATCHING
+      } else {
+        fieldErrors.confirmPassword = errorMsg
+      }
+    } else if (field === "name" || field === "full_name" || field.includes("name")) {
+      fieldErrors.name = errorMsg
+    } else {
+      // For unknown fields, still show the error
+      fieldErrors[field] = errorMsg
+    }
+  }
+
+  const generateErrorMessagesFromResponse = (error) => {
+    const fieldErrors = {}
+    const serverData = error.response?.data || {}
+    const status = error.response?.status
+
+    console.log("[Signup] Server error response:", { 
+      status, 
+      data: serverData,
+      message: serverData.message 
+    })
+
+    // Handle 400 Bad Request (your backend uses this for both validation and duplicate checks)
+    if (status === 400) {
+      const message = serverData.message || ''
+      const messageLower = message.toLowerCase()
+
+      console.log("[Signup] 400 error message:", message)
+
+      // Check for email/username duplicate errors
+      if (messageLower.includes('email already in use') || messageLower.includes('email already exists')) {
+        fieldErrors.email = ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
+        return fieldErrors
+      }
+      
+      if (messageLower.includes('username already taken') || messageLower.includes('username already exists')) {
+        fieldErrors.username = ERROR_MESSAGES.USERNAME_ALREADY_EXISTS
+        return fieldErrors
+      }
+
+      // Check for missing fields
+      if (messageLower.includes('please provide username, email, and password')) {
+        if (!form.username.trim()) {
+          fieldErrors.username = VALIDATION_RULES.username.messages.required
+        }
+        if (!form.email.trim()) {
+          fieldErrors.email = VALIDATION_RULES.email.messages.required
+        }
+        if (!form.password.trim()) {
+          fieldErrors.password = VALIDATION_RULES.password.messages.required
+        }
+        return fieldErrors
+      }
+
+      // Check for validation errors from mongoose or other middleware
+      if (serverData.errors) {
+        Object.entries(serverData.errors).forEach(([field, errorObj]) => {
+          const errorMsg = errorObj.message || ''
+          const errorLower = errorMsg.toLowerCase()
+
+          if (field === 'email') {
+            if (errorLower.includes('already') || errorLower.includes('unique')) {
+              fieldErrors.email = ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
+            } else if (errorLower.includes('valid')) {
+              fieldErrors.email = ERROR_MESSAGES.INVALID_EMAIL
+            }
+          } else if (field === 'username') {
+            if (errorLower.includes('already') || errorLower.includes('unique') || errorLower.includes('taken')) {
+              fieldErrors.username = ERROR_MESSAGES.USERNAME_ALREADY_EXISTS
+            }
+          }
+        })
+      }
+
+      // If we still don't have specific field errors, use the general message
+      if (Object.keys(fieldErrors).length === 0 && message) {
+        // Try to map the general message to a specific field
+        if (messageLower.includes('email')) {
+          fieldErrors.email = message
+        } else if (messageLower.includes('username')) {
+          fieldErrors.username = message
+        } else if (messageLower.includes('password')) {
+          fieldErrors.password = message
+        }
+      }
+
+      return fieldErrors
+    }
+
+    // Handle 401 Unauthorized (login errors)
+    if (status === 401) {
+      const message = serverData.message || ''
+      if (message.toLowerCase().includes('invalid email or password')) {
+        fieldErrors.email = "Invalid email or password"
+        fieldErrors.password = "Invalid email or password"
+      }
+      return fieldErrors
+    }
+
+    // Handle 409 Conflict status (email/username already exists)
+    if (status === 409) {
+      const message = (serverData.message || "").toLowerCase()
+      if (message.includes("email")) {
+        fieldErrors.email = ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
+      } else if (message.includes("username")) {
+        fieldErrors.username = ERROR_MESSAGES.USERNAME_ALREADY_EXISTS
+      } else {
+        fieldErrors.email = ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
+      }
+      return fieldErrors
+    }
+
+    return fieldErrors
+  }
+
+  const getGeneralErrorMessage = (error, fieldErrors) => {
+    const status = error.response?.status
+    const serverData = error.response?.data || {}
+
+    console.log("[Signup] General error analysis:", {
+      status,
+      fieldErrorsCount: Object.keys(fieldErrors).length,
+      serverMessage: serverData.message
+    })
+
+    // If we have field-specific errors, don't show a general error
+    if (Object.keys(fieldErrors).length > 0) {
+      return null
+    }
+
+    if (!error.response) {
+      return {
+        title: "Connection Error",
+        message: ERROR_MESSAGES.NETWORK_ERROR,
+      }
+    }
+
+    if (error.code === "ECONNABORTED") {
+      return {
+        title: "Request Timeout",
+        message: ERROR_MESSAGES.TIMEOUT_ERROR,
+      }
+    }
+
+    if (status >= 500) {
+      return {
+        title: "Server Error",
+        message: ERROR_MESSAGES.SERVER_ERROR,
+      }
+    }
+
+    // For 400 errors without field-specific handling, show the server message
+    if (status === 400 && serverData.message) {
+      return {
+        title: "Registration Error",
+        message: serverData.message,
+      }
+    }
+
+    // Final fallback
+    return {
+      title: "Registration Error",
+      message: ERROR_MESSAGES.UNKNOWN_ERROR,
+    }
+  }
 
   const handleChange = (name, value) => {
     setForm({ ...form, [name]: value })
@@ -88,12 +313,10 @@ function Signup({ navigation }) {
       validateField(name, value)
     }
 
-    // Clear general error when user starts typing
     if (generalError) {
       setGeneralError(null)
     }
 
-    // Clear field error when user modifies the field
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: null }))
     }
@@ -190,14 +413,6 @@ function Signup({ navigation }) {
     return Object.keys(newErrors).length === 0
   }
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword)
-  }
-
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword)
-  }
-
   const handleSubmit = async () => {
     if (loading) return
 
@@ -259,35 +474,26 @@ function Signup({ navigation }) {
       }
     } catch (error) {
       console.error("[Signup] Registration error:", error)
+      console.log("[Signup] Full error object:", JSON.stringify(error, null, 2))
 
-      const errorInfo = parseError(error)
-      const { code, title, message, fieldErrors: serverFieldErrors } = errorInfo
+      const fieldErrorsFromResponse = generateErrorMessagesFromResponse(error)
+      const generalErrorMessage = getGeneralErrorMessage(error, fieldErrorsFromResponse)
 
-      console.log("[Signup] Parsed error code:", code)
-      console.log("[Signup] Server field errors:", serverFieldErrors)
-      console.log("[Signup] Error title:", title)
-      console.log("[Signup] Error message:", message)
+      console.log("[Signup] Generated field errors:", fieldErrorsFromResponse)
+      console.log("[Signup] General error:", generalErrorMessage)
 
-      if (Object.keys(serverFieldErrors).length > 0) {
-        console.log("[Signup] Setting field errors:", serverFieldErrors)
-        setFieldErrors(serverFieldErrors)
+      // Always set field errors if we have them
+      if (Object.keys(fieldErrorsFromResponse).length > 0) {
+        setFieldErrors(fieldErrorsFromResponse)
       }
 
-      setGeneralError({ title, message })
-
-      if (code === ERROR_CODES.EMAIL_ALREADY_EXISTS) {
-        Alert.alert(title, message)
-      } else if (code === ERROR_CODES.USERNAME_ALREADY_EXISTS) {
-        Alert.alert(title, message)
-      } else if (Object.keys(serverFieldErrors).length > 0) {
-        // If there are field errors, show them in the banner but skip alert
-        // User can see the specific field errors inline
-        const firstFieldError = Object.values(serverFieldErrors)[0]
-        if (firstFieldError) {
-          console.log("[Signup] Showing field error in banner")
-        }
-      } else {
-        Alert.alert(title, message)
+      // Only show alert for general errors (no field-specific errors)
+      if (generalErrorMessage && Object.keys(fieldErrorsFromResponse).length === 0) {
+        setGeneralError(generalErrorMessage)
+        Alert.alert(generalErrorMessage.title, generalErrorMessage.message)
+      } else if (Object.keys(fieldErrorsFromResponse).length > 0) {
+        // If we have field errors, clear any previous general error
+        setGeneralError(null)
       }
     } finally {
       setLoading(false)
@@ -295,30 +501,50 @@ function Signup({ navigation }) {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <View style={styles.formContainer}>
             <View style={styles.header}>
-              <Text style={styles.title}>Join BrainStorm</Text>
-              <Text style={styles.subtitle}>Connect with like-minded creators and build amazing projects together</Text>
+              <Text style={[styles.title, { color: colors.primary }]}>Join BrainStorm</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Connect with like-minded creators and build amazing projects together</Text>
             </View>
 
             {generalError && (
-              <View style={styles.generalErrorBanner}>
-                <Text style={styles.generalErrorTitle}>{generalError.title}</Text>
-                <Text style={styles.generalErrorMessage}>{generalError.message}</Text>
+              <View style={[
+                styles.generalErrorBanner, 
+                { 
+                  backgroundColor: `${colors.error}20`,
+                  borderLeftColor: colors.error 
+                }
+              ]}>
+                <Text style={[styles.generalErrorTitle, { color: colors.error }]}>{generalError.title}</Text>
+                <Text style={[styles.generalErrorMessage, { color: colors.error }]}>{generalError.message}</Text>
               </View>
             )}
 
             <View style={styles.form}>
               {/* Username Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Username *</Text>
+                <Text style={[styles.label, { color: colors.primary }]}>Username *</Text>
                 <TextInput
-                  style={[styles.input, fieldErrors.username && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.username && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
                   placeholder="Choose a unique username"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.textSecondary}
                   value={form.username}
                   onChangeText={(text) => handleChange("username", text)}
                   onBlur={() => handleFieldBlur("username")}
@@ -328,20 +554,34 @@ function Signup({ navigation }) {
                 />
                 {fieldErrors.username && (
                   <View style={styles.errorContainer}>
-                    <Text style={styles.errorIcon}>⚠</Text>
-                    <Text style={styles.errorText}>{fieldErrors.username}</Text>
+                    <Text style={[styles.errorIcon, { color: colors.error }]}>⚠</Text>
+                    <Text style={[styles.errorText, { color: colors.error }]}>{fieldErrors.username}</Text>
                   </View>
                 )}
-                <Text style={styles.helperText}>3-20 characters, letters, numbers, and underscores only</Text>
+                <Text style={[styles.helperText, { color: colors.textSecondary }]}>3-20 characters, letters, numbers, and underscores only</Text>
               </View>
 
               {/* Full Name Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name *</Text>
+                <Text style={[styles.label, { color: colors.primary }]}>Full Name *</Text>
                 <TextInput
-                  style={[styles.input, fieldErrors.name && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.name && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
                   placeholder="Your full name"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.textSecondary}
                   value={form.name}
                   onChangeText={(text) => handleChange("name", text)}
                   onBlur={() => handleFieldBlur("name")}
@@ -350,19 +590,33 @@ function Signup({ navigation }) {
                 />
                 {fieldErrors.name && (
                   <View style={styles.errorContainer}>
-                    <Text style={styles.errorIcon}>⚠</Text>
-                    <Text style={styles.errorText}>{fieldErrors.name}</Text>
+                    <Text style={[styles.errorIcon, { color: colors.error }]}>⚠</Text>
+                    <Text style={[styles.errorText, { color: colors.error }]}>{fieldErrors.name}</Text>
                   </View>
                 )}
               </View>
 
               {/* Email Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email *</Text>
+                <Text style={[styles.label, { color: colors.primary }]}>Email *</Text>
                 <TextInput
-                  style={[styles.input, fieldErrors.email && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.email && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
                   placeholder="your@email.com"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={form.email}
@@ -372,19 +626,34 @@ function Signup({ navigation }) {
                 />
                 {fieldErrors.email && (
                   <View style={styles.errorContainer}>
-                    <Text style={styles.errorIcon}>⚠</Text>
-                    <Text style={styles.errorText}>{fieldErrors.email}</Text>
+                    <Text style={[styles.errorIcon, { color: colors.error }]}>⚠</Text>
+                    <Text style={[styles.errorText, { color: colors.error }]}>{fieldErrors.email}</Text>
                   </View>
                 )}
               </View>
 
               {/* Bio Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Bio (Optional)</Text>
+                <Text style={[styles.label, { color: colors.primary }]}>Bio (Optional)</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea, fieldErrors.bio && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    styles.textArea,
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.bio && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
                   placeholder="Tell us about yourself"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.textSecondary}
                   value={form.bio}
                   onChangeText={(text) => handleChange("bio", text)}
                   multiline
@@ -392,105 +661,146 @@ function Signup({ navigation }) {
                   maxLength={200}
                   editable={!loading}
                 />
-                <Text style={styles.charCount}>{form.bio.length}/200</Text>
+                <Text style={[styles.charCount, { color: colors.textSecondary }]}>{form.bio.length}/200</Text>
               </View>
 
               {/* Skills Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Skills (Optional)</Text>
+                <Text style={[styles.label, { color: colors.primary }]}>Skills (Optional)</Text>
                 <TextInput
-                  style={[styles.input, fieldErrors.skills && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.skills && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
                   placeholder="React, Python, Design, Gaming, etc."
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.textSecondary}
                   value={form.skills}
                   onChangeText={(text) => handleChange("skills", text)}
                   editable={!loading}
                 />
-                <Text style={styles.helperText}>Separate with commas</Text>
+                <Text style={[styles.helperText, { color: colors.textSecondary }]}>Separate with commas</Text>
               </View>
 
               {/* Interests Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Interests (Optional)</Text>
+                <Text style={[styles.label, { color: colors.primary }]}>Interests (Optional)</Text>
                 <TextInput
-                  style={[styles.input, fieldErrors.interests && styles.inputError]}
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.interests && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
                   placeholder="Web Development, AI Research, Mobile Games, etc."
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.textSecondary}
                   value={form.interests}
                   onChangeText={(text) => handleChange("interests", text)}
                   editable={!loading}
                 />
-                <Text style={styles.helperText}>Separate with commas</Text>
+                <Text style={[styles.helperText, { color: colors.textSecondary }]}>Separate with commas</Text>
               </View>
 
               {/* Password Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password *</Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[styles.passwordInput, fieldErrors.password && styles.inputError]}
-                    placeholder="At least 6 characters"
-                    placeholderTextColor="#6B7280"
-                    secureTextEntry={!showPassword}
-                    value={form.password}
-                    onChangeText={(text) => handleChange("password", text)}
-                    onBlur={() => handleFieldBlur("password")}
-                    editable={!loading}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={togglePasswordVisibility}
-                    disabled={loading}
-                  >
-                    <Text style={styles.eyeIconText}>
-                      {showPassword ? "👁️" : "👁️‍🗨️"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={[styles.label, { color: colors.primary }]}>Password *</Text>
+                <TextInput
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.password && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
+                  placeholder="At least 6 characters"
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                  value={form.password}
+                  onChangeText={(text) => handleChange("password", text)}
+                  onBlur={() => handleFieldBlur("password")}
+                  editable={!loading}
+                />
                 {fieldErrors.password && (
                   <View style={styles.errorContainer}>
-                    <Text style={styles.errorIcon}>⚠</Text>
-                    <Text style={styles.errorText}>{fieldErrors.password}</Text>
+                    <Text style={[styles.errorIcon, { color: colors.error }]}>⚠</Text>
+                    <Text style={[styles.errorText, { color: colors.error }]}>{fieldErrors.password}</Text>
                   </View>
                 )}
-                <Text style={styles.helperText}>Use a strong password with at least 6 characters</Text>
+                <Text style={[styles.helperText, { color: colors.textSecondary }]}>Use a strong password with at least 6 characters</Text>
               </View>
 
               {/* Confirm Password Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password *</Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[styles.passwordInput, fieldErrors.confirmPassword && styles.inputError]}
-                    placeholder="Repeat your password"
-                    placeholderTextColor="#6B7280"
-                    secureTextEntry={!showConfirmPassword}
-                    value={form.confirmPassword}
-                    onChangeText={(text) => handleChange("confirmPassword", text)}
-                    onBlur={() => handleFieldBlur("confirmPassword")}
-                    editable={!loading}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={toggleConfirmPasswordVisibility}
-                    disabled={loading}
-                  >
-                    <Text style={styles.eyeIconText}>
-                      {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={[styles.label, { color: colors.primary }]}>Confirm Password *</Text>
+                <TextInput
+                  style={[
+                    styles.input, 
+                    { 
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border 
+                    },
+                    fieldErrors.confirmPassword && [
+                      styles.inputError,
+                      { 
+                        borderColor: colors.error,
+                        backgroundColor: `${colors.error}10`
+                      }
+                    ]
+                  ]}
+                  placeholder="Repeat your password"
+                  placeholderTextColor={colors.textSecondary}
+                  secureTextEntry
+                  value={form.confirmPassword}
+                  onChangeText={(text) => handleChange("confirmPassword", text)}
+                  onBlur={() => handleFieldBlur("confirmPassword")}
+                  editable={!loading}
+                />
                 {fieldErrors.confirmPassword && (
                   <View style={styles.errorContainer}>
-                    <Text style={styles.errorIcon}>⚠</Text>
-                    <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>
+                    <Text style={[styles.errorIcon, { color: colors.error }]}>⚠</Text>
+                    <Text style={[styles.errorText, { color: colors.error }]}>{fieldErrors.confirmPassword}</Text>
                   </View>
                 )}
               </View>
 
               {/* Submit Button */}
               <TouchableOpacity
-                style={[styles.signupButton, loading && styles.signupButtonDisabled]}
+                style={[
+                  styles.signupButton, 
+                  { backgroundColor: colors.primary },
+                  loading && [
+                    styles.signupButtonDisabled,
+                    { backgroundColor: colors.border }
+                  ]
+                ]}
                 onPress={handleSubmit}
                 disabled={loading}
               >
@@ -503,9 +813,13 @@ function Signup({ navigation }) {
 
               {/* Login Link */}
               <View style={styles.loginContainer}>
-                <Text style={styles.loginText}>Already have an account? </Text>
+                <Text style={[styles.loginText, { color: colors.textSecondary }]}>Already have an account? </Text>
                 <TouchableOpacity onPress={() => navigation.navigate("Login")} disabled={loading}>
-                  <Text style={[styles.loginLink, loading && styles.loginLinkDisabled]}>Log in</Text>
+                  <Text style={[
+                    styles.loginLink, 
+                    { color: colors.primary },
+                    loading && styles.loginLinkDisabled
+                  ]}>Log in</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -519,7 +833,6 @@ function Signup({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
   },
   scrollContent: {
     flexGrow: 1,
@@ -538,32 +851,26 @@ const styles = StyleSheet.create({
     fontSize: 30,
     marginTop: 16,
     fontWeight: "bold",
-    color: "#10B981",
     textAlign: "center",
     marginBottom: 16,
   },
   subtitle: {
-    color: "#9CA3AF",
     textAlign: "center",
     marginBottom: 24,
     fontSize: 16,
   },
   generalErrorBanner: {
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
     borderLeftWidth: 4,
-    borderLeftColor: "#EF4444",
     borderRadius: 8,
     padding: 12,
     marginBottom: 24,
   },
   generalErrorTitle: {
-    color: "#EF4444",
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 4,
   },
   generalErrorMessage: {
-    color: "#FCA5A5",
     fontSize: 13,
     lineHeight: 18,
   },
@@ -574,49 +881,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: "#10B981",
     fontSize: 14,
     fontWeight: "600",
   },
   input: {
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
-    color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#4B5563",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-  },
-  passwordInputContainer: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  passwordInput: {
-    flex: 1,
-    backgroundColor: "rgba(31, 41, 55, 0.8)",
-    color: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#4B5563",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    paddingRight: 50, // Space for the eye icon
-  },
-  eyeIcon: {
-    position: "absolute",
-    right: 16,
-    padding: 4,
-  },
-  eyeIconText: {
-    fontSize: 18,
-    color: "#9CA3AF",
   },
   inputError: {
-    borderColor: "#EF4444",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    // Styles applied dynamically
   },
   textArea: {
     height: 100,
@@ -628,28 +904,23 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   errorIcon: {
-    color: "#EF4444",
     fontSize: 14,
     marginTop: 2,
   },
   errorText: {
-    color: "#EF4444",
     fontSize: 12,
     flex: 1,
     lineHeight: 16,
   },
   helperText: {
-    color: "#6B7280",
     fontSize: 12,
     fontStyle: "italic",
   },
   charCount: {
-    color: "#6B7280",
     fontSize: 12,
     textAlign: "right",
   },
   signupButton: {
-    backgroundColor: "#10B981",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -661,7 +932,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   signupButtonDisabled: {
-    backgroundColor: "#374151",
     shadowOpacity: 0,
   },
   signupButtonText: {
@@ -676,11 +946,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   loginText: {
-    color: "#9CA3AF",
     fontSize: 14,
   },
   loginLink: {
-    color: "#10B981",
     fontSize: 14,
     fontWeight: "600",
     textDecorationLine: "underline",

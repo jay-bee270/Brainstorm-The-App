@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { StatusBar } from "react-native";
-import { ThemeProvider } from './context/ThemeContext';
-// import { ToastProvider } from './utils/ToastProvider';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import RouterPath from "./routing/RouterPath";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-function App() {
-  const [isLoading, setIsLoading] = useState(true);
+// Separate component for themed StatusBar
+const ThemedStatusBar = () => {
+  const { colors, isDarkMode } = useTheme();
 
   // useEffect(() => {
   //   const initializeApp = async () => {
@@ -24,16 +23,30 @@ function App() {
   //   return null; // Or a minimal loading indicator
   // }
 
+  
+  return (
+    <StatusBar 
+      barStyle={isDarkMode ? "light-content" : "dark-content"}
+      backgroundColor={colors.background}
+      translucent={false}
+    />
+  );
+};
+
+// Main App component
+function AppContent() {
+  return (
+    <>
+      <ThemedStatusBar />
+      <RouterPath />
+    </>
+  );
+}
+
+function App() {
   return (
     <ThemeProvider>
-      {/* <ToastProvider> */}
-        <StatusBar 
-          barStyle="light-content" 
-          backgroundColor="#000000" 
-          translucent={true}
-        />
-        <RouterPath />
-      {/* </ToastProvider> */}
+      <AppContent />
     </ThemeProvider>
   );
 }

@@ -15,9 +15,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
+import { useTheme } from "../context/ThemeContext"
 
 function Settings() {
   const navigation = useNavigation();
+  const { themeMode, toggleTheme, colors, isDarkMode } = useTheme();
+  
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -93,6 +96,10 @@ function Settings() {
 
   const handleNotificationChange = (name, value) => {
     setNotifications(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleThemeChange = (mode) => {
+    toggleTheme(mode);
   };
 
   const validateForm = () => {
@@ -268,172 +275,223 @@ function Settings() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10B981" />
-        <Text style={styles.loadingText}>Loading your profile...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.primary }]}>Loading your profile...</Text>
       </View>
     );
   }
 
+  const getThemeButtonStyle = (mode) => {
+    if (themeMode === mode) {
+      return [styles.themeButton, styles.themeButtonActive, { backgroundColor: colors.primary }];
+    }
+    return [styles.themeButton, { backgroundColor: colors.card, borderColor: colors.border }];
+  };
+
+  const getThemeButtonTextStyle = (mode) => {
+    if (themeMode === mode) {
+      return [styles.themeButtonText, styles.themeButtonTextActive];
+    }
+    return [styles.themeButtonText, { color: colors.text }];
+  };
+
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          <Text style={styles.title}>Profile Settings</Text>
+          <Text style={[styles.title, { color: colors.primary }]}>Profile Settings</Text>
           
+          {/* Theme Selection Section */}
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.primary }]}>Theme</Text>
+            
+            <View style={styles.themeButtonsContainer}>
+              <TouchableOpacity
+                style={getThemeButtonStyle('light')}
+                onPress={() => handleThemeChange('light')}
+              >
+                <Text style={getThemeButtonTextStyle('light')}>☀️ Light</Text>
+              </TouchableOpacity>
+
+              {/* <TouchableOpacity
+                style={getThemeButtonStyle('dark')}
+                onPress={() => handleThemeChange('dark')}
+              >
+                <Text style={getThemeButtonTextStyle('dark')}>🌙 </Text>
+              </TouchableOpacity> */}
+
+              <TouchableOpacity
+                style={getThemeButtonStyle('dark')}
+                onPress={() => handleThemeChange('dark')}
+              >
+                <Text style={getThemeButtonTextStyle('dark')}>📱 System</Text>
+              </TouchableOpacity>
+            </View>
+            
+            
+          </View>
+
           {/* Profile Information Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile Information</Text>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.primary }]}>Profile Information</Text>
             
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Username *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Username *</Text>
               <TextInput
-                style={[styles.input, errors.username && styles.inputError]}
+                style={[styles.input, errors.username && styles.inputError, 
+                        { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.username}
                 onChangeText={(text) => handleChange('username', text)}
                 placeholder="Choose a username"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
               {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Full Name *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Full Name *</Text>
               <TextInput
-                style={[styles.input, errors.name && styles.inputError]}
+                style={[styles.input, errors.name && styles.inputError, 
+                        { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.name}
                 onChangeText={(text) => handleChange('name', text)}
                 placeholder="Your full name"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
               {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Email *</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Email *</Text>
               <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
+                style={[styles.input, errors.email && styles.inputError, 
+                        { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.email}
                 onChangeText={(text) => handleChange('email', text)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholder="your@email.com"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Bio</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Bio</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, 
+                        { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.bio}
                 onChangeText={(text) => handleChange('bio', text)}
                 multiline
                 numberOfLines={3}
                 placeholder="Tell us about yourself..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
-              <Text style={styles.charCount}>{form.bio.length}/200</Text>
+              <Text style={[styles.charCount, { color: colors.textSecondary }]}>{form.bio.length}/200</Text>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Skills</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Skills</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.skills}
                 onChangeText={(text) => handleChange('skills', text)}
                 placeholder="React, Python, Design, Gaming..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
-              <Text style={styles.helperText}>Separate skills with commas</Text>
+              <Text style={[styles.helperText, { color: colors.textSecondary }]}>Separate skills with commas</Text>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Interests</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Interests</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.interests}
                 onChangeText={(text) => handleChange('interests', text)}
                 placeholder="Web Development, AI Research, Mobile Games..."
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
-              <Text style={styles.helperText}>Separate interests with commas</Text>
+              <Text style={[styles.helperText, { color: colors.textSecondary }]}>Separate interests with commas</Text>
             </View>
           </View>
 
           {/* Password Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Change Password</Text>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.primary }]}>Change Password</Text>
             
             <View style={styles.formGroup}>
-              <Text style={styles.label}>New Password</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>New Password</Text>
               <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
+                style={[styles.input, errors.password && styles.inputError, 
+                        { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.password}
                 onChangeText={(text) => handleChange('password', text)}
                 secureTextEntry
                 placeholder="Leave blank to keep current password"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
               {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Confirm New Password</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Confirm New Password</Text>
               <TextInput
-                style={[styles.input, errors.confirmPassword && styles.inputError]}
+                style={[styles.input, errors.confirmPassword && styles.inputError, 
+                        { backgroundColor: 'rgba(0, 0, 0, 0.4)', color: colors.text, borderColor: colors.border }]}
                 value={form.confirmPassword}
                 onChangeText={(text) => handleChange('confirmPassword', text)}
                 secureTextEntry
                 placeholder="Confirm your new password"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor={colors.textSecondary}
               />
               {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
             </View>
           </View>
 
           {/* Notifications Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notifications</Text>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.primary }]}>Notifications</Text>
             
             <View style={styles.switchGroup}>
-              <Text style={styles.switchLabel}>Email Notifications</Text>
+              <Text style={[styles.switchLabel, { color: colors.textSecondary }]}>Email Notifications</Text>
               <Switch
                 value={notifications.emailNotifications}
                 onValueChange={(value) => handleNotificationChange('emailNotifications', value)}
-                trackColor={{ false: '#374151', true: '#10B981' }}
-                thumbColor={notifications.emailNotifications ? '#FFFFFF' : '#9CA3AF'}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={notifications.emailNotifications ? '#FFFFFF' : colors.textSecondary}
               />
             </View>
 
             <View style={styles.switchGroup}>
-              <Text style={styles.switchLabel}>Project Updates</Text>
+              <Text style={[styles.switchLabel, { color: colors.textSecondary }]}>Project Updates</Text>
               <Switch
                 value={notifications.projectUpdates}
                 onValueChange={(value) => handleNotificationChange('projectUpdates', value)}
-                trackColor={{ false: '#374151', true: '#10B981' }}
-                thumbColor={notifications.projectUpdates ? '#FFFFFF' : '#9CA3AF'}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={notifications.projectUpdates ? '#FFFFFF' : colors.textSecondary}
               />
             </View>
 
             <View style={styles.switchGroup}>
-              <Text style={styles.switchLabel}>New Messages</Text>
+              <Text style={[styles.switchLabel, { color: colors.textSecondary }]}>New Messages</Text>
               <Switch
                 value={notifications.newMessages}
                 onValueChange={(value) => handleNotificationChange('newMessages', value)}
-                trackColor={{ false: '#374151', true: '#10B981' }}
-                thumbColor={notifications.newMessages ? '#FFFFFF' : '#9CA3AF'}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={notifications.newMessages ? '#FFFFFF' : colors.textSecondary}
               />
             </View>
           </View>
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveButton, (!hasChanges() || saving) && styles.saveButtonDisabled]}
+            style={[styles.saveButton, (!hasChanges() || saving) && styles.saveButtonDisabled, 
+                    { backgroundColor: colors.primary }]}
             onPress={handleSave}
             disabled={!hasChanges() || saving}
           >
@@ -447,15 +505,21 @@ function Settings() {
           </TouchableOpacity>
 
           {/* Danger Zone */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitleDanger}>Danger Zone</Text>
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitleDanger, { color: colors.error }]}>Danger Zone</Text>
             
-            <TouchableOpacity style={styles.dangerButton} onPress={handleLogout}>
-              <Text style={styles.dangerButtonText}>Logout</Text>
+            <TouchableOpacity 
+              style={[styles.dangerButton, { borderColor: colors.error }]} 
+              onPress={handleLogout}
+            >
+              <Text style={[styles.dangerButtonText, { color: colors.error }]}>Logout</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.dangerButtonDelete} onPress={handleDeleteAccount}>
-              <Text style={styles.dangerButtonDeleteText}>Delete Account</Text>
+            <TouchableOpacity 
+              style={[styles.dangerButtonDelete, { borderColor: colors.error }]} 
+              onPress={handleDeleteAccount}
+            >
+              <Text style={[styles.dangerButtonDeleteText, { color: colors.error }]}>Delete Account</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -467,7 +531,6 @@ function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -479,36 +542,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
   loadingText: {
-    color: '#10B981',
     marginTop: 12,
     fontSize: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#10B981',
     textAlign: 'center',
     marginBottom: 24,
   },
   section: {
-    backgroundColor: 'rgba(31, 41, 55, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#374151',
   },
   sectionTitle: {
-    color: '#10B981',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
   },
   sectionTitleDanger: {
-    color: '#EF4444',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
@@ -517,16 +573,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    color: '#9CA3AF',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    color: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#4B5563',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -547,17 +599,41 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   helperText: {
-    color: '#6B7280',
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
     fontStyle: 'italic',
   },
   charCount: {
-    color: '#6B7280',
     fontSize: 12,
     textAlign: 'right',
     marginTop: 4,
+  },
+  // Theme Selection Styles
+  themeButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  themeButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    borderWidth: 1,
+  },
+  themeButtonActive: {
+    borderColor: 'transparent',
+  },
+  themeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  themeButtonTextActive: {
+    color: '#000000',
+    fontWeight: 'bold',
   },
   switchGroup: {
     flexDirection: 'row',
@@ -565,21 +641,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#374151',
   },
   switchLabel: {
-    color: '#9CA3AF',
     fontSize: 16,
   },
   saveButton: {
-    backgroundColor: '#10B981',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 20,
   },
   saveButtonDisabled: {
-    backgroundColor: '#374151',
     opacity: 0.6,
   },
   saveButtonText: {
@@ -588,29 +660,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   dangerButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#EF4444',
   },
   dangerButtonText: {
-    color: '#EF4444',
     fontSize: 16,
     fontWeight: '600',
   },
   dangerButtonDelete: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EF4444',
   },
   dangerButtonDeleteText: {
-    color: '#EF4444',
     fontSize: 16,
     fontWeight: 'bold',
   },
