@@ -212,12 +212,12 @@ function Search() {
             borderColor: colors.border 
           }]}>
             <Text style={[styles.tipsTitle, { color: colors.primary }]}>
-              Try searching for:
+            
             </Text>
-            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "React Native"</Text>
-            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "AI research"</Text>
-            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "Game development"</Text>
-            <Text style={[styles.tip, { color: colors.textSecondary }]}>• "Web design"</Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}></Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}></Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}></Text>
+            <Text style={[styles.tip, { color: colors.textSecondary }]}></Text>
           </View>
         </View>
       );
